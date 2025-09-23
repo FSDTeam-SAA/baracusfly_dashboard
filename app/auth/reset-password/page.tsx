@@ -9,6 +9,7 @@ import { Lock, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 import { authAPI } from "@/lib/api"
 import { useRouter, useSearchParams } from "next/navigation"
+import Image from "next/image"
 
 export default function ResetPasswordPage() {
   const [newPassword, setNewPassword] = useState("")
@@ -54,17 +55,18 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-yellow-400 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">🐝</span>
-            </div>
-            <span className="ml-2 text-xl font-bold text-green-800">ButlerBee</span>
-          </div>
-        </div>
+        <div className="flex items-center justify-center">
+                  <Image
+                    src="/image/logo.png"
+                    alt="Logo"
+                    width={100}
+                    height={100}
+                    className="w-[76px] h-[100px]"
+                  />
+                </div>
 
         {/* Reset Password Form */}
-        <div className="bg-white rounded-lg shadow-sm p-8">
+        <div className="">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-green-800 mb-2">Reset Password</h1>
             <p className="text-gray-600">Create a new password</p>
