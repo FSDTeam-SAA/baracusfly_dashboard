@@ -4,15 +4,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useQuery } from "@tanstack/react-query"
-import { bookingAPI } from "@/lib/api"
 import { Skeleton } from "@/components/ui/skeleton"
+import type { DashboardRecentBooking } from "@/types/dashboard"
 
-export function RecentBookings() {
-  const { data: bookings, isLoading } = useQuery({
-    queryKey: ["recent-bookings"],
-    queryFn: () => bookingAPI.getBookings(1, 5),
-  })
+interface RecentBookingsProps {
+  bookings?: DashboardRecentBooking[]
+  isLoading?: boolean
+}
+
+const formatDate = (value?: string) => {
+  if (!value) return "N/A"
+  return new Date(value).toLocaleDateString()
+}
+
+const statusClassNames = (status?: string) => {
+  if (status === "completed") return "bg-green-100 text-green-800"
+  if (status === "pending") return "bg-yellow-100 text-yellow-800"
+  return "bg-red-100 text-red-800"
+}
+
+export function RecentBookings({ bookings = [], isLoading = false }: RecentBookingsProps) {
+  const bookingData = bookings.slice(0, 5)
 
   if (isLoading) {
     return (
@@ -39,8 +51,6 @@ export function RecentBookings() {
     )
   }
 
-  const bookingData = bookings?.data?.data?.bookings || []
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -53,55 +63,49 @@ export function RecentBookings() {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {bookingData.map((booking: any) => (
-            <div key={booking._id} className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="text-sm font-medium text-gray-600">#{booking._id.slice(-5)}</div>
-                <div className="flex items-center space-x-3">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src="/placeholder.svg?height=32&width=32" />
-                    <AvatarFallback>{booking.seller?.email?.charAt(0).toUpperCase() || "S"}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium">{booking.seller?.email || "Unknown Seller"}</p>
+        {bookingData.length ? (
+          <div className="space-y-4">
+            {bookingData.map((booking) => (
+              <div key={booking._id} className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="text-sm font-medium text-gray-600">#{booking._id.slice(-5)}</div>
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                      <AvatarFallback>{booking.seller?.email?.charAt(0).toUpperCase() || "S"}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{booking.seller?.email || "Unknown Seller"}</p>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600">{booking.service?.title || "Service"}</div>
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                      <AvatarFallback>{booking.user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{booking.user?.email || "Guest User"}</p>
+                    </div>
                   </div>
                 </div>
-                <div className="text-sm text-gray-600">{booking.service?.title || "Service"}</div>
-                <div className="flex items-center space-x-3">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src="/placeholder.svg?height=32&width=32" />
-                    <AvatarFallback>{booking.user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium">{booking.user?.email || "Guest User"}</p>
-                  </div>
+                <div className="flex items-center space-x-4">
+                  <Badge
+                    variant={booking.status === "completed" ? "default" : booking.status === "pending" ? "secondary" : "destructive"}
+                    className={statusClassNames(booking.status)}
+                  >
+                    {booking.status || "unknown"}
+                  </Badge>
+                  <div className="text-sm text-gray-600">{formatDate(booking.createdAt)}</div>
                 </div>
               </div>
-              <div className="flex items-center space-x-4">
-                <Badge
-                  variant={
-                    booking.status === "completed"
-                      ? "default"
-                      : booking.status === "pending"
-                        ? "secondary"
-                        : "destructive"
-                  }
-                  className={
-                    booking.status === "completed"
-                      ? "bg-green-100 text-green-800"
-                      : booking.status === "pending"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
-                  }
-                >
-                  {booking.status}
-                </Badge>
-                <div className="text-sm text-gray-600">{new Date(booking.createdAt).toLocaleDateString()}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="h-52 flex items-center justify-center text-sm text-gray-500">
+            No recent bookings available
+          </div>
+        )}
       </CardContent>
     </Card>
   )

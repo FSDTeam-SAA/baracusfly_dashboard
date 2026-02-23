@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Eye, Trash2, Plus, Search, Edit } from "lucide-react"
+import { Eye, Trash2, Search, Edit } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
-import { api } from "@/lib/api"
+import { api, serviceAPI } from "@/lib/api"
 import { DeleteConfirmModal } from "@/components/dashboard/delete-confirm-modal"
-import { EditServiceModal } from "./edit/EditServiceModal" // <-- create folder 'edit' and drop the modal
+import { EditServiceModal } from "./edit/EditServiceModal"
 
 interface Service {
   id: string
@@ -23,6 +23,39 @@ interface Service {
   date: string
 }
 
+interface ApiServiceCategory {
+  _id?: string
+  commission?: string
+}
+
+interface ApiServiceSeller {
+  _id?: string
+}
+
+interface ApiService {
+  _id: string
+  title?: string
+  name?: string
+  image?: string
+  serviceImage?: string
+  subServiceCount?: number | string
+  serviceProviderCount?: number | string
+  commission?: string
+  category?: ApiServiceCategory | string
+  seller?: ApiServiceSeller | string
+  createdAt?: string
+}
+
+const normalizeServicesPayload = (payload: unknown): ApiService[] => {
+  if (Array.isArray(payload)) return payload as ApiService[]
+
+  if (payload && typeof payload === "object" && Array.isArray((payload as { services?: unknown[] }).services)) {
+    return (payload as { services: ApiService[] }).services
+  }
+
+  return []
+}
+
 export default function ServicesPage() {
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [deleteService, setDeleteService] = useState<Service | null>(null)
@@ -31,21 +64,27 @@ export default function ServicesPage() {
   const [editOpen, setEditOpen] = useState(false)
   const queryClient = useQueryClient()
 
-  // Normalize API response → array of Service
-  const { data: services = [], isLoading } = useQuery({
+  // Supports both legacy `data: Service[]` and new `data: { services: Service[] }`.
+  const { data: services = [], isLoading } = useQuery<Service[]>({
     queryKey: ["services"],
     queryFn: () =>
-      api.get("/service/all-services").then((res) =>
-        (res.data?.data || []).map((s: any): Service => ({
+      serviceAPI.getAllServices().then((res) => {
+        const apiServices = normalizeServicesPayload(res.data?.data)
+
+        return apiServices.map((s): Service => ({
           id: s._id,
           name: s.name ?? s.title ?? "Untitled",
           image: s.serviceImage ?? s.image ?? "",
           subServiceCount: Number(s.subServiceCount ?? 0),
-          serviceProviderCount: Number(s.serviceProviderCount ?? 0),
-          commission: String(s.commission ?? "—"),
-          date: s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "—",
+          serviceProviderCount: Number(
+            s.serviceProviderCount ?? (s.seller && typeof s.seller === "object" ? 1 : 0),
+          ),
+          commission: String(
+            s.commission ?? (typeof s.category === "object" ? s.category?.commission : undefined) ?? "--",
+          ),
+          date: s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "--",
         }))
-      ),
+      }),
   })
 
   const deleteServiceMutation = useMutation({
@@ -64,12 +103,12 @@ export default function ServicesPage() {
 
   const handleSelectService = (serviceId: string, checked: boolean) => {
     setSelectedServices((prev) =>
-      checked ? (prev.includes(serviceId) ? prev : [...prev, serviceId]) : prev.filter((id) => id !== serviceId)
+      checked ? (prev.includes(serviceId) ? prev : [...prev, serviceId]) : prev.filter((id) => id !== serviceId),
     )
   }
 
   const filteredServices = services.filter((service) =>
-    (service.name ?? "").toLowerCase().includes(searchTerm.toLowerCase())
+    (service.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   if (isLoading) {
@@ -90,13 +129,14 @@ export default function ServicesPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Services</h1>
           <nav className="flex items-center space-x-2 text-sm text-gray-500 mt-1">
-            <span>Overview</span><span>›</span><span className="text-gray-900">Services</span>
+            <span>Overview</span>
+            <span>{">"}</span>
+            <span className="text-gray-900">Services</span>
           </nav>
         </div>
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200">
-        {/* Search */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center space-x-4">
             <div className="relative flex-1 max-w-md">
@@ -111,7 +151,6 @@ export default function ServicesPage() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
@@ -188,7 +227,6 @@ export default function ServicesPage() {
           </table>
         </div>
 
-        {/* Footer */}
         <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
           <p className="text-sm text-gray-500">
             Showing {filteredServices.length} result{filteredServices.length === 1 ? "" : "s"}
@@ -196,7 +234,6 @@ export default function ServicesPage() {
         </div>
       </div>
 
-      {/* Edit modal */}
       <EditServiceModal
         serviceId={editId}
         open={editOpen}
@@ -204,7 +241,6 @@ export default function ServicesPage() {
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["services"] })}
       />
 
-      {/* Delete confirmation */}
       <DeleteConfirmModal
         open={!!deleteService}
         onOpenChange={() => setDeleteService(null)}

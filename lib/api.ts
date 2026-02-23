@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getSession } from "next-auth/react";
+import type { AdminOverviewResponse } from "@/types/dashboard";
 
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -91,6 +92,11 @@ export const userAPI = {
 
   updateSellerStatus: (sellerId: string, status: string) =>
     api.patch(`/user/update-requested-seller/${sellerId}`, { status }),
+};
+
+// Admin APIs
+export const adminAPI = {
+  getOverview: () => api.get<AdminOverviewResponse>("/admin/overview"),
 };
 
 // Category APIs
